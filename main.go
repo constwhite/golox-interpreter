@@ -10,14 +10,14 @@ import (
 func main() {
 	// golox filepath.lox. get filepath from args. if empty run repl, if args[1] not empty run file from path. if >1 throw error
 	args := os.Args
-	if len(args) > 1 {
+	if len(args) > 2 {
 		log.Println("Usage: golox [script]")
 		os.Exit(64)
-	}
-	if filePath := args[1]; filePath == "" {
+	} else if len(args) == 1 {
 		runPrompt()
-	} else {
-		runFile(filePath)
+
+	} else if len(args) == 2 {
+		runFile(args[1])
 	}
 
 }
@@ -53,10 +53,11 @@ func runFile(path string) {
 
 func run(source string) {
 	// init new scanner. NOT bufio.NewScanner, this is the scanner we are going to build not yet impleneted
-	scanner = scan.NewScanner(source)
-	tokens := scanner.scanTokens()
+	// scanner = scan.NewScanner(source)
+	// tokens := scanner.scanTokens()
 
-	for i := 0; i < len(tokens); i++ {
-		fmt.Println(tokens[i])
-	}
+	// for i := 0; i < len(tokens); i++ {
+	// 	fmt.Println(tokens[i])
+	// }
+	fmt.Println(source)
 }
