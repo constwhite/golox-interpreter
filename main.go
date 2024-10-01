@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+var hadError bool
+
 func main() {
 	// golox filepath.lox. get filepath from args. if empty run repl, if args[1] not empty run file from path. if >1 throw error
 	args := os.Args
@@ -31,6 +33,7 @@ func runPrompt() {
 		// imput.Text() returns most recently generated token from scanner
 		line := input.Text()
 		run(line)
+		hadError = false
 	}
 	// when input.Scan() returns false break loop. if err returned from input.Err() print the error to console. if nil the input has ended successfully
 	if err := input.Err(); err != nil {
@@ -49,6 +52,9 @@ func runFile(path string) {
 	//converts to string. allowing to use the byte array as text
 	fileString := string(file)
 	run(fileString)
+	if hadError {
+		os.Exit(65)
+	}
 }
 
 func run(source string) {
@@ -60,4 +66,13 @@ func run(source string) {
 	// 	fmt.Println(tokens[i])
 	// }
 	fmt.Println(source)
+}
+
+func error(line int, message string) {
+	report(line, "", message)
+}
+
+func report(line int, where string, message string) {
+	fmt.Errorf("[line %v] error %v: %v", line, where, message)
+	hadError = true
 }
