@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/constwhite/golox-interpreter/scanner"
 )
 
 var hadError bool
@@ -59,16 +61,18 @@ func runFile(path string) {
 
 func run(source string) {
 	// init new scanner. NOT bufio.NewScanner, this is the scanner we are going to build not yet impleneted
-	// scanner = scan.NewScanner(source)
-	// tokens := scanner.scanTokens()
 
-	// for i := 0; i < len(tokens); i++ {
-	// 	fmt.Println(tokens[i])
-	// }
 	fmt.Println(source)
+	scanner := scanner.NewScanner(source, os.Stderr)
+	tokens := scanner.ScanTokens()
+	for i := 0; i < len(tokens); i++ {
+		printToken := tokens[i]
+		fmt.Printf("Token type: %v, Lexeme: %v, Literal: %v, Line:%v\n", printToken.TokenType, printToken.Lexeme, printToken.Literal, printToken.Line)
+	}
+
 }
 
-func error(line int, message string) {
+func Error(line int, message string) {
 	report(line, "", message)
 }
 

@@ -55,12 +55,12 @@ const (
 )
 
 type Token struct {
-	tokenType TokenType
-	lexeme    string
-	literal   interface{}
-	line      int
+	TokenType TokenType
+	Lexeme    string
+	Literal   interface{}
+	Line      int
 }
 
 func (t Token) toString() string {
-	return fmt.Sprintf("%d %s %s", t.tokenType, t.lexeme, t.literal)
+	return fmt.Sprintf("%d %s %s", t.TokenType, t.Lexeme, t.Literal)
 }
