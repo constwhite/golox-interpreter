@@ -72,12 +72,12 @@ func run(source string) {
 
 }
 
-func Error(line int, message string) {
-	report(line, "", message)
-}
+// func Error(line int, message string) {
+// 	report(line, "", message)
+// }
 
-func report(line int, where string, message string) {
-	err := fmt.Errorf("[line %v] error %v: %v", line, where, message)
-	fmt.Print(err)
-	hadError = true
-}
+// func report(line int, where string, message string) {
+// 	err := fmt.Errorf("[line %v] error %v: %v", line, where, message)
+// 	fmt.Print(err)
+// 	hadError = true
+// }

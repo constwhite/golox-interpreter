@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/constwhite/golox-interpreter/errorHandler"
 	"github.com/constwhite/golox-interpreter/token"
 )
 
@@ -130,12 +131,14 @@ func (s *Scanner) scanToken() {
 		} else if s.isAlpha(c) {
 			s.identifier()
 		} else {
-			s.error("Unexpected Character.")
+			errorHandler.ReportError(s.stdErr, fmt.Sprintf("Unexpected Character: %v", string(c)), s.line)
+			// s.error(fmt.Sprintf("Unexpected Character: %v", string(c)))
 		}
 	}
 }
 
 func (s *Scanner) advance() rune {
+	//returns the rune of the current byte in the source string and moves to the next byte
 	char := rune(s.source[s.current])
 	s.current++
 	return char
@@ -143,6 +146,7 @@ func (s *Scanner) advance() rune {
 
 func (s *Scanner) string() {
 	for s.peek() != '"' && !s.isAtEnd() {
+		//iterates over bytes in source segment until it reaches a closing ' " ' or reaches the end of the lexeme.
 		if s.peek() == '\n' {
 			s.line++
 		}
@@ -150,11 +154,14 @@ func (s *Scanner) string() {
 	}
 
 	if s.isAtEnd() {
-		s.error("Unterminated string")
+		//if no closing ' " ' return error
+		errorHandler.ReportError(s.stdErr, "Unterminated string", s.line)
+		// s.error("Unterminated string")
 		return
 	}
 
 	s.advance()
+	// add token
 	value := s.source[s.start+1 : s.current-1]
 	s.addTokenWithLiteral(token.TokenString, value)
 }
@@ -255,6 +262,7 @@ func (s *Scanner) isAtEnd() bool {
 
 }
 
-func (s *Scanner) error(msg string) {
-	_, _ = s.stdErr.Write([]byte(fmt.Sprintf("[line: %v] Error: %s\n", s.line, msg)))
-}
+// func (s *Scanner) error(msg string) {
+// 	// _, _ = s.stdErr.Write([]byte(fmt.Sprintf("[line: %v] Error: %s\n", s.line, msg)))
+// 	fmt.Fprintf(s.stdErr, "[line: %v] Error: %s\n", s.line, msg)
+// }
