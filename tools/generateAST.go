@@ -8,10 +8,10 @@ import (
 )
 
 var exprList = []string{
-	"Binary:Left Expr, Operator token.Token, Right Expr",
-	"Grouping:Expression Expr",
-	"Literal:Value interface{}",
-	"Unary:Operator token.Token, Right Expr",
+	"BinaryExpr:Left Expr, Operator token.Token, Right Expr",
+	"GroupingExpr:Expression Expr",
+	"LiteralExpr:Value interface{}",
+	"UnaryExpr:Operator token.Token, Right Expr",
 }
 
 func main() {
@@ -33,18 +33,20 @@ func defineAST(outputDir string, baseName string, exprTypes []string) {
 	}
 	defer file.Close()
 
-	fmt.Fprintf(file, "package %v\n", baseName)
+	fmt.Fprintf(file, "package abstractSyntaxTree")
 	fmt.Fprintf(file, `import "github.com/constwhite/golox-interpreter/token"`)
 	fmt.Fprintln(file, "")
 	baseNameUpper := fmt.Sprintf("%v%v", strings.ToUpper(string(baseName[0])), string(baseName[1:]))
-	fmt.Fprintf(file, "type %v struct{}", baseNameUpper)
+	fmt.Fprintf(file, "type %v interface{\nAccept(visitor %vVisitor) interface{}}\n", baseNameUpper, baseNameUpper)
 
 	for i := 0; i < len(exprTypes); i++ {
 		exprType := exprTypes[i]
 		structName := strings.Split(exprType, ":")[0]
 		fields := strings.Split(exprType, ":")[1]
 		defineType(file, structName, fields)
+		defineAcceptMethod(file, structName, baseName)
 	}
+	defineVisitor(file, baseName, exprTypes)
 
 }
 
@@ -56,4 +58,35 @@ func defineType(file *os.File, structName string, fieldList string) {
 		fmt.Fprintf(file, "%v\n", field)
 	}
 	fmt.Fprintf(file, "}\n")
+}
+
+/*
+	type baseNameUpperVisitor interface{
+		visitexprName(baseName exprName)
+		...
+	}
+
+}
+*/
+func defineVisitor(file *os.File, baseName string, exprTypes []string) {
+	baseNameUpper := fmt.Sprintf("%v%v", strings.ToUpper(string(baseName[0])), string(baseName[1:]))
+	fmt.Fprintf(file, "type %vVisitor interface {\n", baseNameUpper)
+	for i := 0; i < len(exprTypes); i++ {
+		exprType := exprTypes[i]
+		exprName := strings.Split(exprType, ":")[0]
+		fmt.Fprintf(file, "Visit%v(%v %v) interface{} \n", exprName, baseName, exprName)
+	}
+	fmt.Fprintf(file, "}\n")
+
+}
+
+/*
+func (b structName) Accept(visitor ExprVisitor) interface{} {
+	return visitor.VisitStructName(b)
+}
+*/
+
+func defineAcceptMethod(file *os.File, structName string, baseName string) {
+	baseNameUpper := fmt.Sprintf("%v%v", strings.ToUpper(string(baseName[0])), string(baseName[1:]))
+	fmt.Fprintf(file, "func (%v %v) Accept(visitor %vVisitor) interface{}{\nreturn visitor.Visit%v(%v)}\n", string(baseName[0]), structName, baseNameUpper, structName, string(baseName[0]))
 }
