@@ -131,7 +131,7 @@ func (s *Scanner) scanToken() {
 		} else if s.isAlpha(c) {
 			s.identifier()
 		} else {
-			errorHandler.ReportError(s.stdErr, fmt.Sprintf("Unexpected Character: %v", string(c)), s.line)
+			errorHandler.ReportError(s.stdErr, fmt.Sprintf("Unexpected Character: %v", string(c)), "", s.line)
 			// s.error(fmt.Sprintf("Unexpected Character: %v", string(c)))
 		}
 	}
@@ -155,7 +155,7 @@ func (s *Scanner) string() {
 
 	if s.isAtEnd() {
 		//if no closing ' " ' return error
-		errorHandler.ReportError(s.stdErr, "Unterminated string", s.line)
+		errorHandler.ReportError(s.stdErr, "Unterminated string", "at end", s.line)
 		// s.error("Unterminated string")
 		return
 	}

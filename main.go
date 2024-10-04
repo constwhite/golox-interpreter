@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 
+	abstractsyntaxtree "github.com/constwhite/golox-interpreter/abstractSyntaxTree"
+	"github.com/constwhite/golox-interpreter/parser"
 	"github.com/constwhite/golox-interpreter/scanner"
 )
 
@@ -62,9 +64,18 @@ func runFile(path string) {
 func run(source string) {
 	// init new scanner. NOT bufio.NewScanner, this is the scanner we are going to build not yet impleneted
 
-	fmt.Println(source)
+	// fmt.Println(source)
 	scanner := scanner.NewScanner(source, os.Stderr)
 	tokens := scanner.ScanTokens()
+	parser := parser.NewParser(tokens, os.Stderr)
+	expression, HadError := parser.Parse()
+	fmt.Print(parser.HadError)
+	if HadError {
+		return
+	}
+	printer := abstractsyntaxtree.NewPrinter()
+	fmt.Println(printer.Print(expression))
+
 	for i := 0; i < len(tokens); i++ {
 		printToken := tokens[i]
 		fmt.Printf("Token type: %v, Lexeme: %v, Literal: %v, Line:%v\n", printToken.TokenType, printToken.Lexeme, printToken.Literal, printToken.Line)
