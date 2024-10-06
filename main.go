@@ -7,11 +7,13 @@ import (
 	"os"
 
 	abstractsyntaxtree "github.com/constwhite/golox-interpreter/abstractSyntaxTree"
+	"github.com/constwhite/golox-interpreter/interpreter"
 	"github.com/constwhite/golox-interpreter/parser"
 	"github.com/constwhite/golox-interpreter/scanner"
 )
 
 var hadError bool
+var hadRuntimeError bool
 
 func main() {
 	// golox filepath.lox. get filepath from args. if empty run repl, if args[1] not empty run file from path. if >1 throw error
@@ -59,6 +61,7 @@ func runFile(path string) {
 	if hadError {
 		os.Exit(65)
 	}
+
 }
 
 func run(source string) {
@@ -69,10 +72,12 @@ func run(source string) {
 	tokens := scanner.ScanTokens()
 	parser := parser.NewParser(tokens, os.Stderr)
 	expression, HadError := parser.Parse()
-	fmt.Print(parser.HadError)
+
 	if HadError {
 		return
 	}
+	interpreter := interpreter.NewInterpreter(os.Stderr, os.Stdout)
+	interpreter.Interpret(expression)
 	printer := abstractsyntaxtree.NewPrinter()
 	fmt.Println(printer.Print(expression))
 
