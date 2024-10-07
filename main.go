@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	abstractsyntaxtree "github.com/constwhite/golox-interpreter/abstractSyntaxTree"
 	"github.com/constwhite/golox-interpreter/interpreter"
 	"github.com/constwhite/golox-interpreter/parser"
 	"github.com/constwhite/golox-interpreter/scanner"
@@ -62,6 +61,10 @@ func runFile(path string) {
 		os.Exit(65)
 	}
 
+	if hadRuntimeError {
+		os.Exit(70)
+	}
+
 }
 
 func run(source string) {
@@ -71,19 +74,19 @@ func run(source string) {
 	scanner := scanner.NewScanner(source, os.Stderr)
 	tokens := scanner.ScanTokens()
 	parser := parser.NewParser(tokens, os.Stderr)
-	expression, HadError := parser.Parse()
+	statements, HadError := parser.Parse()
 
 	if HadError {
 		return
 	}
 	interpreter := interpreter.NewInterpreter(os.Stderr, os.Stdout)
-	interpreter.Interpret(expression)
-	printer := abstractsyntaxtree.NewPrinter()
-	fmt.Println(printer.Print(expression))
+	hadRuntimeError = interpreter.Interpret(statements)
+	// printer := abstractsyntaxtree.NewPrinter()
+	// fmt.Println(printer.Print(statements))
 
 	for i := 0; i < len(tokens); i++ {
 		printToken := tokens[i]
-		fmt.Printf("Token type: %v, Lexeme: %v, Literal: %v, Line:%v\n", printToken.TokenType, printToken.Lexeme, printToken.Literal, printToken.Line)
+		fmt.Printf("\nToken type: %v, Lexeme: %v, Literal: %v, Line:%v\n", printToken.TokenType, printToken.Lexeme, printToken.Literal, printToken.Line)
 	}
 
 }

@@ -14,6 +14,11 @@ var exprList = []string{
 	"UnaryExpr:Operator token.Token, Right Expr",
 }
 
+var stmtList = []string{
+	"Expression:Expression Expr",
+	"Print: Expression Expr",
+}
+
 func main() {
 	//generates file with expression types
 	args := os.Args
@@ -21,7 +26,7 @@ func main() {
 		log.Println("Usage: generateAST <output directory>")
 	}
 	outputDir := args[1]
-	defineAST(outputDir, "expr", exprList)
+	defineAST(outputDir, "stmt", stmtList)
 }
 
 func defineAST(outputDir string, baseName string, exprTypes []string) {

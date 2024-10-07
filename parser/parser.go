@@ -29,16 +29,47 @@ func NewParser(sourceTokens []t.Token, stdErr io.Writer) *Parser {
 	return &Parser{sourceTokens: sourceTokens, stdErr: stdErr}
 }
 
-func (p *Parser) Parse() (abs.Expr, bool) {
-	expr := p.expression()
+func (p *Parser) Parse() ([]abs.Stmt, bool) {
+	var statements []abs.Stmt
+	for !p.isAtEnd() {
+		statements = append(statements, p.statement())
+	}
 	if p.Error() != "" {
 		p.HadError = true
 		return nil, p.HadError
 	}
-	return expr, p.HadError
+	return statements, p.HadError
 }
 
+// func (p *Parser) Parse() (abs.Expr, bool) {
+// 	expr := p.expression()
+// 	if p.Error() != "" {
+// 		p.HadError = true
+// 		return nil, p.HadError
+// 	}
+// 	return expr, p.HadError
+// }
+
 // grammar functions
+func (p *Parser) statement() abs.Stmt {
+	if p.match(t.TokenPrint) {
+		return p.printStatement()
+	}
+
+	return p.expressionStatement()
+}
+
+func (p *Parser) printStatement() abs.Stmt {
+	value := p.expression()
+	p.consume(t.TokenSemiColon, "expect ';' after value")
+	return abs.PrintStmt{Expression: value}
+}
+func (p *Parser) expressionStatement() abs.Stmt {
+	expression := p.expression()
+	p.consume(t.TokenSemiColon, "expect ';' after value")
+	return abs.ExpressionStmt{Expression: expression}
+}
+
 func (p *Parser) expression() abs.Expr {
 	return p.equality()
 }

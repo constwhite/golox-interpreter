@@ -1,4 +1,4 @@
-package abstractsyntaxtree
+package abstractSyntaxTree
 
 import "github.com/constwhite/golox-interpreter/token"
 

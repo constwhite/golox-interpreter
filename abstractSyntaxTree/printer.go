@@ -1,4 +1,4 @@
-package abstractsyntaxtree
+package abstractSyntaxTree
 
 import "fmt"
 

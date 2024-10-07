@@ -29,18 +29,25 @@ func NewInterpreter(stdErr io.Writer, stdOut io.Writer) *Interpreter {
 	return &Interpreter{stdErr: stdErr, stdOut: stdOut}
 }
 
-func (i *Interpreter) Interpret(expression abs.Expr) bool {
-	value := i.evaluate(expression)
+func (i *Interpreter) Interpret(stmtList []abs.Stmt) bool {
 	if err := i.RuntimeError.Error(); err != nil {
 		e.RuntimeError(i.stdErr, err, i.RuntimeError.Line)
 		i.HasRuntimeError = true
 		return i.HasRuntimeError
 	} else {
-		valueString := i.stringify(value)
-		fmt.Fprint(i.stdOut, valueString)
+		for index := 0; index < len(stmtList); index++ {
+			stmt := stmtList[index]
+			i.execute(stmt)
+		}
 		return false
 	}
 }
+
+func (i *Interpreter) execute(stmt abs.Stmt) {
+	stmt.Accept(i)
+}
+
+//expression visitors
 
 func (i *Interpreter) VisitLiteralExpr(expr abs.LiteralExpr) interface{} {
 	return expr.Value
@@ -119,6 +126,18 @@ func (i *Interpreter) VisitBinaryExpr(expr abs.BinaryExpr) interface{} {
 		}
 	}
 
+	return nil
+}
+
+// statement visitors
+func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
+	i.evaluate(stmt.Expression)
+	return nil
+}
+
+func (i *Interpreter) VisitPrintStmt(stmt abs.PrintStmt) interface{} {
+	value := i.evaluate(stmt.Expression)
+	fmt.Fprint(i.stdOut, i.stringify(value))
 	return nil
 }
 
