@@ -30,8 +30,17 @@ func (s VarStmt) Accept(visitor StmtVisitor) interface{} {
 	return visitor.VisitVarStmt(s)
 }
 
+type BlockStmt struct {
+	Statements []Stmt
+}
+
+func (s BlockStmt) Accept(visitor StmtVisitor) interface{} {
+	return visitor.VisitBlockStmt(s)
+}
+
 type StmtVisitor interface {
 	VisitExpressionStmt(stmt ExpressionStmt) interface{}
 	VisitPrintStmt(stmt PrintStmt) interface{}
 	VisitVarStmt(stmt VarStmt) interface{}
+	VisitBlockStmt(stmt BlockStmt) interface{}
 }

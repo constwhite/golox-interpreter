@@ -67,6 +67,9 @@ func (p *Parser) statement() abs.Stmt {
 	if p.match(t.TokenPrint) {
 		return p.printStatement()
 	}
+	if p.match(t.TokenLeftBrace) {
+		return abs.BlockStmt{Statements: p.blockStatement()}
+	}
 
 	return p.expressionStatement()
 }
@@ -80,6 +83,14 @@ func (p *Parser) expressionStatement() abs.Stmt {
 	expression := p.expression()
 	p.consume(t.TokenSemiColon, "expect ';' after value")
 	return abs.ExpressionStmt{Expression: expression}
+}
+func (p *Parser) blockStatement() []abs.Stmt {
+	var statements []abs.Stmt = nil
+	for !p.check(t.TokenRightBrace) && !p.isAtEnd() {
+		statements = append(statements, p.declaration())
+	}
+	p.consume(t.TokenRightBrace, "expect '}' after block")
+	return statements
 }
 
 func (p *Parser) expression() abs.Expr {

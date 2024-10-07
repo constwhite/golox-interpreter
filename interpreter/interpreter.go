@@ -28,7 +28,7 @@ func (rte *runtimeError) Error() error {
 }
 
 func NewInterpreter(stdErr io.Writer, stdOut io.Writer) *Interpreter {
-	environment := env.NewEnvironment()
+	environment := env.NewEnvironment(nil)
 	return &Interpreter{stdErr: stdErr, stdOut: stdOut, Environment: environment}
 }
 
@@ -48,6 +48,18 @@ func (i *Interpreter) Interpret(stmtList []abs.Stmt) bool {
 
 func (i *Interpreter) execute(stmt abs.Stmt) {
 	stmt.Accept(i)
+}
+
+func (i *Interpreter) executeBlock(statements []abs.Stmt, environment *env.Environment) {
+	previous := i.Environment
+	defer func() {
+		i.Environment = previous
+	}()
+	i.Environment = environment
+	for index := 0; index < len(statements); index++ {
+		stmt := statements[index]
+		i.execute(stmt)
+	}
 }
 
 //expression visitors
@@ -169,6 +181,11 @@ func (i *Interpreter) VisitVarStmt(stmt abs.VarStmt) interface{} {
 		value = i.evaluate(stmt.Initialiser)
 	}
 	i.Environment.Define(stmt.Name.Lexeme, value)
+	return nil
+}
+
+func (i *Interpreter) VisitBlockStmt(stmt abs.BlockStmt) interface{} {
+	i.executeBlock(stmt.Statements, env.NewEnvironment(i.Environment))
 	return nil
 }
 
