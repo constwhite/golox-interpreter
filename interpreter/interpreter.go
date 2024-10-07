@@ -5,6 +5,7 @@ import (
 	"io"
 
 	abs "github.com/constwhite/golox-interpreter/abstractSyntaxTree"
+	env "github.com/constwhite/golox-interpreter/environment"
 	e "github.com/constwhite/golox-interpreter/errorHandler"
 	t "github.com/constwhite/golox-interpreter/token"
 )
@@ -14,6 +15,7 @@ type Interpreter struct {
 	stdOut          io.Writer
 	HasRuntimeError bool
 	RuntimeError    runtimeError
+	Environment     *env.Environment
 }
 
 type runtimeError struct {
@@ -26,7 +28,8 @@ func (rte *runtimeError) Error() error {
 }
 
 func NewInterpreter(stdErr io.Writer, stdOut io.Writer) *Interpreter {
-	return &Interpreter{stdErr: stdErr, stdOut: stdOut}
+	environment := env.NewEnvironment()
+	return &Interpreter{stdErr: stdErr, stdOut: stdOut, Environment: environment}
 }
 
 func (i *Interpreter) Interpret(stmtList []abs.Stmt) bool {
@@ -129,6 +132,25 @@ func (i *Interpreter) VisitBinaryExpr(expr abs.BinaryExpr) interface{} {
 	return nil
 }
 
+func (i *Interpreter) VisitVariableExpr(expr abs.VariableExpr) interface{} {
+	value, err := i.Environment.Get(expr.Name)
+	if err != nil {
+		runtimeErr := runtimeError{error: err, Line: expr.Name.Line}
+		i.RuntimeError = runtimeErr
+
+	}
+	return value
+}
+func (i *Interpreter) VisitAssignExpr(expr abs.AssignExpr) interface{} {
+	value := i.evaluate(expr.Value)
+	err := i.Environment.Assign(expr.Name, value)
+	if err != nil {
+		runtimeErr := runtimeError{error: err, Line: expr.Name.Line}
+		i.RuntimeError = runtimeErr
+	}
+	return value
+}
+
 // statement visitors
 func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
 	i.evaluate(stmt.Expression)
@@ -138,6 +160,15 @@ func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
 func (i *Interpreter) VisitPrintStmt(stmt abs.PrintStmt) interface{} {
 	value := i.evaluate(stmt.Expression)
 	fmt.Fprint(i.stdOut, i.stringify(value))
+	return nil
+}
+
+func (i *Interpreter) VisitVarStmt(stmt abs.VarStmt) interface{} {
+	var value interface{}
+	if stmt.Initialiser != nil {
+		value = i.evaluate(stmt.Initialiser)
+	}
+	i.Environment.Define(stmt.Name.Lexeme, value)
 	return nil
 }
 

@@ -83,7 +83,7 @@ func (p *Parser) expressionStatement() abs.Stmt {
 }
 
 func (p *Parser) expression() abs.Expr {
-	return p.equality()
+	return p.assignment()
 }
 func (p *Parser) equality() abs.Expr {
 	expr := p.comparison()
@@ -138,6 +138,21 @@ func (p *Parser) unary() abs.Expr {
 	}
 
 	return p.primary()
+}
+
+func (p *Parser) assignment() abs.Expr {
+	expr := p.equality()
+	if p.match() {
+		equals := p.previous()
+		value := p.assignment()
+		if exprVariable, ok := expr.(abs.VariableExpr); ok {
+			name := exprVariable.Name
+			return abs.AssignExpr{Name: name, Value: value}
+		}
+
+		p.error(equals, "invalid assignment target")
+	}
+	return expr
 }
 
 func (p *Parser) primary() abs.Expr {

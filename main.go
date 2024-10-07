@@ -84,10 +84,10 @@ func run(source string) {
 	// printer := abstractsyntaxtree.NewPrinter()
 	// fmt.Println(printer.Print(statements))
 
-	for i := 0; i < len(tokens); i++ {
-		printToken := tokens[i]
-		fmt.Printf("\nToken type: %v, Lexeme: %v, Literal: %v, Line:%v\n", printToken.TokenType, printToken.Lexeme, printToken.Literal, printToken.Line)
-	}
+	// for i := 0; i < len(tokens); i++ {
+	// 	printToken := tokens[i]
+	// 	fmt.Printf("\nToken type: %v, Lexeme: %v, Literal: %v, Line:%v\n", printToken.TokenType, printToken.Lexeme, printToken.Literal, printToken.Line)
+	// }
 
 }
 

@@ -48,10 +48,20 @@ func (e VariableExpr) Accept(visitor ExprVisitor) interface{} {
 	return visitor.VisitVariableExpr(e)
 }
 
+type AssignExpr struct {
+	Name  token.Token
+	Value Expr
+}
+
+func (e AssignExpr) Accept(visitor ExprVisitor) interface{} {
+	return visitor.VisitAssignExpr(e)
+}
+
 type ExprVisitor interface {
 	VisitBinaryExpr(expr BinaryExpr) interface{}
 	VisitGroupingExpr(expr GroupingExpr) interface{}
 	VisitLiteralExpr(expr LiteralExpr) interface{}
 	VisitUnaryExpr(expr UnaryExpr) interface{}
 	VisitVariableExpr(expr VariableExpr) interface{}
+	VisitAssignExpr(expr AssignExpr) interface{}
 }
