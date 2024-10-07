@@ -40,9 +40,18 @@ func (e UnaryExpr) Accept(visitor ExprVisitor) interface{} {
 	return visitor.VisitUnaryExpr(e)
 }
 
+type VariableExpr struct {
+	Name token.Token
+}
+
+func (e VariableExpr) Accept(visitor ExprVisitor) interface{} {
+	return visitor.VisitVariableExpr(e)
+}
+
 type ExprVisitor interface {
 	VisitBinaryExpr(expr BinaryExpr) interface{}
 	VisitGroupingExpr(expr GroupingExpr) interface{}
 	VisitLiteralExpr(expr LiteralExpr) interface{}
 	VisitUnaryExpr(expr UnaryExpr) interface{}
+	VisitVariableExpr(expr VariableExpr) interface{}
 }
