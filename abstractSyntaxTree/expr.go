@@ -67,6 +67,16 @@ func (e LogicalExpr) Accept(visitor ExprVisitor) interface{} {
 	return visitor.VisitLogicalExpr(e)
 }
 
+type CallExpr struct {
+	Callee     Expr
+	Paren      token.Token
+	Arguements []Expr
+}
+
+func (e CallExpr) Accept(visitor ExprVisitor) interface{} {
+	return visitor.VisitCallExpr(e)
+}
+
 type ExprVisitor interface {
 	VisitBinaryExpr(expr BinaryExpr) interface{}
 	VisitGroupingExpr(expr GroupingExpr) interface{}
@@ -74,5 +84,6 @@ type ExprVisitor interface {
 	VisitUnaryExpr(expr UnaryExpr) interface{}
 	VisitVariableExpr(expr VariableExpr) interface{}
 	VisitAssignExpr(expr AssignExpr) interface{}
+	VisitCallExpr(expr CallExpr) interface{}
 	VisitLogicalExpr(expr LogicalExpr) interface{}
 }

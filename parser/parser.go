@@ -216,7 +216,36 @@ func (p *Parser) unary() abs.Expr {
 		return abs.UnaryExpr{Operator: operator, Right: right}
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+func (p *Parser) call() abs.Expr {
+	expr := p.primary()
+	for {
+		if p.match(t.TokenLeftParen) {
+			expr = p.finishCall(expr)
+		} else {
+			break
+		}
+	}
+	return expr
+}
+
+func (p *Parser) finishCall(callee abs.Expr) abs.Expr {
+	var arguements []abs.Expr = nil
+	if !p.check(t.TokenRightParen) {
+		for {
+			if len(arguements) >= 255 {
+				p.error(p.peek(), "functions can not accept more than 255 arguements")
+			}
+			arguements = append(arguements, p.expression())
+			if !p.match(t.TokenComma) {
+				break
+			}
+		}
+	}
+	paren := p.consume(t.TokenRightParen, "expect ')' after arguements")
+	return abs.CallExpr{Callee: callee, Paren: paren, Arguements: arguements}
 }
 
 func (p *Parser) assignment() abs.Expr {

@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -175,6 +176,27 @@ func (i *Interpreter) VisitLogicalExpr(expr abs.LogicalExpr) interface{} {
 		}
 	}
 	return i.evaluate(expr.Right)
+}
+
+func (i *Interpreter) VisitCallExpr(expr abs.CallExpr) interface{} {
+	callee := i.evaluate(expr.Callee)
+	var arguements []interface{}
+	for index := 0; index < len(expr.Arguements); index++ {
+		arguement := expr.Arguements[index]
+		arguements = append(arguements, i.evaluate(arguement))
+	}
+	function, callable := callee.(loxCallable)
+	if !callable {
+		err := runtimeError{error: errors.New("can only call funtions and classes"), Line: expr.Paren.Line}
+		i.RuntimeError = err
+		return nil
+	}
+	if len(arguements) != function.arity() {
+		err := runtimeError{error: fmt.Errorf("expected %v arguements but got %v", function.arity(), len(arguements)), Line: expr.Paren.Line}
+		i.RuntimeError = err
+		return nil
+	}
+	return function.call(i, arguements)
 }
 
 // statement visitors
