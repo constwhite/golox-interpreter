@@ -1,6 +1,8 @@
 package abstractSyntaxTree
 
-import "github.com/constwhite/golox-interpreter/token"
+import (
+	t "github.com/constwhite/golox-interpreter/token"
+)
 
 type Stmt interface {
 	Accept(visitor StmtVisitor) interface{}
@@ -23,7 +25,7 @@ func (s PrintStmt) Accept(visitor StmtVisitor) interface{} {
 
 type VarStmt struct {
 	Initialiser Expr
-	Name        token.Token
+	Name        t.Token
 }
 
 func (s VarStmt) Accept(visitor StmtVisitor) interface{} {
@@ -57,11 +59,32 @@ func (s WhileStmt) Accept(visitor StmtVisitor) interface{} {
 	return visitor.VisitWhileStmt(s)
 }
 
+type FunctionStmt struct {
+	Name   t.Token
+	Params []t.Token
+	Body   []Stmt
+}
+
+func (s FunctionStmt) Accept(visitor StmtVisitor) interface{} {
+	return visitor.VisitFunctionStmt(s)
+}
+
+type ReturnStmt struct {
+	Keyword t.Token
+	Value   Expr
+}
+
+func (s ReturnStmt) Accept(visitor StmtVisitor) interface{} {
+	return visitor.VisitReturnStmt(s)
+}
+
 type StmtVisitor interface {
 	VisitExpressionStmt(stmt ExpressionStmt) interface{}
 	VisitPrintStmt(stmt PrintStmt) interface{}
 	VisitVarStmt(stmt VarStmt) interface{}
 	VisitBlockStmt(stmt BlockStmt) interface{}
-	VisitWhileStmt(stmt WhileStmt) interface{}
 	VisitIfStmt(stmt IfStmt) interface{}
+	VisitWhileStmt(stmt WhileStmt) interface{}
+	VisitFunctionStmt(stmt FunctionStmt) interface{}
+	VisitReturnStmt(stmt ReturnStmt) interface{}
 }

@@ -17,6 +17,7 @@ type Interpreter struct {
 	HasRuntimeError bool
 	RuntimeError    runtimeError
 	Environment     *env.Environment
+	Globals         *env.Environment
 }
 
 type runtimeError struct {
@@ -29,8 +30,9 @@ func (rte *runtimeError) Error() error {
 }
 
 func NewInterpreter(stdErr io.Writer, stdOut io.Writer) *Interpreter {
-	environment := env.NewEnvironment(nil)
-	return &Interpreter{stdErr: stdErr, stdOut: stdOut, Environment: environment}
+	global := env.NewEnvironment(nil)
+	global.Define("clock", Clock{})
+	return &Interpreter{stdErr: stdErr, stdOut: stdOut, Environment: global, Globals: global}
 }
 
 func (i *Interpreter) Interpret(stmtList []abs.Stmt) bool {
@@ -44,22 +46,6 @@ func (i *Interpreter) Interpret(stmtList []abs.Stmt) bool {
 			i.execute(stmt)
 		}
 		return false
-	}
-}
-
-func (i *Interpreter) execute(stmt abs.Stmt) {
-	stmt.Accept(i)
-}
-
-func (i *Interpreter) executeBlock(statements []abs.Stmt, environment *env.Environment) {
-	previous := i.Environment
-	defer func() {
-		i.Environment = previous
-	}()
-	i.Environment = environment
-	for index := 0; index < len(statements); index++ {
-		stmt := statements[index]
-		i.execute(stmt)
 	}
 }
 
@@ -205,10 +191,29 @@ func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
 	return nil
 }
 
+func (i *Interpreter) VisitFunctionStmt(stmt abs.FunctionStmt) interface{} {
+	function := loxFunction{stmt}
+	i.Environment.Define(stmt.Name.Lexeme, function)
+	return nil
+}
+
 func (i *Interpreter) VisitPrintStmt(stmt abs.PrintStmt) interface{} {
 	value := i.evaluate(stmt.Expression)
 	fmt.Fprint(i.stdOut, i.stringify(value))
 	return nil
+}
+
+type returnValue struct {
+	Value interface{}
+}
+
+func (i *Interpreter) VisitReturnStmt(stmt abs.ReturnStmt) interface{} {
+	var value interface{} = nil
+	if stmt.Value != nil {
+		value = i.evaluate(stmt.Value)
+	}
+	returnValue := returnValue{Value: value}
+	panic(returnValue)
 }
 
 func (i *Interpreter) VisitVarStmt(stmt abs.VarStmt) interface{} {
@@ -292,4 +297,20 @@ func (i *Interpreter) checkNumberOperands(operator t.Token, left interface{}, ri
 	i.RuntimeError = err
 
 	return false
+}
+
+func (i *Interpreter) execute(stmt abs.Stmt) {
+	stmt.Accept(i)
+}
+
+func (i *Interpreter) executeBlock(statements []abs.Stmt, environment *env.Environment) {
+	previous := i.Environment
+	defer func() {
+		i.Environment = previous
+	}()
+	i.Environment = environment
+	for index := 0; index < len(statements); index++ {
+		stmt := statements[index]
+		i.execute(stmt)
+	}
 }

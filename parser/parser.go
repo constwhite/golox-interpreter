@@ -47,6 +47,9 @@ func (p *Parser) declaration() abs.Stmt {
 		p.HadError = true
 		return nil
 	}
+	if p.match(t.TokenFun) {
+		return p.function("function")
+	}
 	if p.match(t.TokenVar) {
 		return p.varDeclaration()
 	}
@@ -80,6 +83,9 @@ func (p *Parser) statement() abs.Stmt {
 	}
 	if p.match(t.TokenPrint) {
 		return p.printStatement()
+	}
+	if p.match(t.TokenReturn) {
+		return p.returnStatement()
 	}
 	if p.match(t.TokenWhile) {
 		return p.whileStatement()
@@ -152,6 +158,38 @@ func (p *Parser) expressionStatement() abs.Stmt {
 	p.consume(t.TokenSemiColon, "expect ';' after value")
 	return abs.ExpressionStmt{Expression: expression}
 }
+
+func (p *Parser) returnStatement() abs.Stmt {
+	keyword := p.previous()
+	var value abs.Expr = nil
+	if !p.check(t.TokenSemiColon) {
+		value = p.expression()
+	}
+	p.consume(t.TokenSemiColon, "expect ';' after return value")
+	return abs.ReturnStmt{Keyword: keyword, Value: value}
+}
+
+func (p *Parser) function(kind string) abs.FunctionStmt {
+	name := p.consume(t.TokenIdentifier, fmt.Sprintf("expect %v name", kind))
+	p.consume(t.TokenLeftParen, fmt.Sprintf("expect '(' after %v name", kind))
+	var params []t.Token = nil
+	if !p.check(t.TokenRightParen) {
+		for {
+			if len(params) >= 255 {
+				p.error(p.peek(), "number of parameters can not exceed 255")
+			}
+			params = append(params, p.consume(t.TokenIdentifier, "expect parameter name"))
+			if !p.match(t.TokenComma) {
+				break
+			}
+		}
+	}
+	p.consume(t.TokenRightParen, "expect ')' after parameters")
+	p.consume(t.TokenLeftBrace, fmt.Sprintf("expect '{' before %v body", kind))
+	body := p.blockStatement()
+	return abs.FunctionStmt{Name: name, Params: params, Body: body}
+}
+
 func (p *Parser) blockStatement() []abs.Stmt {
 	var statements []abs.Stmt = nil
 	for !p.check(t.TokenRightBrace) && !p.isAtEnd() {
