@@ -38,9 +38,30 @@ func (s BlockStmt) Accept(visitor StmtVisitor) interface{} {
 	return visitor.VisitBlockStmt(s)
 }
 
+type IfStmt struct {
+	Condition  Expr
+	ThenBranch Stmt
+	ElseBranch Stmt
+}
+
+func (s IfStmt) Accept(visitor StmtVisitor) interface{} {
+	return visitor.VisitIfStmt(s)
+}
+
+type WhileStmt struct {
+	Condition Expr
+	Body      Stmt
+}
+
+func (s WhileStmt) Accept(visitor StmtVisitor) interface{} {
+	return visitor.VisitWhileStmt(s)
+}
+
 type StmtVisitor interface {
 	VisitExpressionStmt(stmt ExpressionStmt) interface{}
 	VisitPrintStmt(stmt PrintStmt) interface{}
 	VisitVarStmt(stmt VarStmt) interface{}
 	VisitBlockStmt(stmt BlockStmt) interface{}
+	VisitWhileStmt(stmt WhileStmt) interface{}
+	VisitIfStmt(stmt IfStmt) interface{}
 }

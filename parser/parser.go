@@ -63,15 +63,83 @@ func (p *Parser) varDeclaration() abs.Stmt {
 	return abs.VarStmt{Name: name, Initialiser: initialiser}
 }
 
+func (p *Parser) whileStatement() abs.Stmt {
+	p.consume(t.TokenLeftParen, "expect '(' after 'while'")
+	condition := p.expression()
+	p.consume(t.TokenRightParen, "expect ')' after condition")
+	body := p.statement()
+	return abs.WhileStmt{Condition: condition, Body: body}
+}
+
 func (p *Parser) statement() abs.Stmt {
+	if p.match(t.TokenFor) {
+		return p.forStatement()
+	}
+	if p.match(t.TokenIf) {
+		return p.ifStatement()
+	}
 	if p.match(t.TokenPrint) {
 		return p.printStatement()
+	}
+	if p.match(t.TokenWhile) {
+		return p.whileStatement()
 	}
 	if p.match(t.TokenLeftBrace) {
 		return abs.BlockStmt{Statements: p.blockStatement()}
 	}
 
 	return p.expressionStatement()
+}
+
+func (p *Parser) forStatement() abs.Stmt {
+	p.consume(t.TokenLeftParen, "expect '(' after 'for'")
+	var initialiser abs.Stmt
+	if p.match(t.TokenSemiColon) {
+		initialiser = nil
+	} else if p.match(t.TokenVar) {
+		initialiser = p.varDeclaration()
+	} else {
+		initialiser = p.expressionStatement()
+	}
+	var condition abs.Expr = nil
+	if !p.check(t.TokenSemiColon) {
+		condition = p.expression()
+	}
+	p.consume(t.TokenSemiColon, "expect ';' after loop condition")
+	var increment abs.Expr = nil
+	if !p.check(t.TokenRightParen) {
+		increment = p.expression()
+	}
+	p.consume(t.TokenRightParen, "expect ')' after for clauses")
+	body := p.statement()
+
+	if increment != nil {
+		body = abs.BlockStmt{
+			Statements: []abs.Stmt{body, abs.ExpressionStmt{Expression: increment}},
+		}
+	}
+	if condition == nil {
+		condition = abs.LiteralExpr{Value: true}
+		body = abs.WhileStmt{Condition: condition, Body: body}
+	}
+	if initialiser != nil {
+		body = abs.BlockStmt{Statements: []abs.Stmt{initialiser, body}}
+	}
+
+	return body
+}
+
+func (p *Parser) ifStatement() abs.Stmt {
+	p.consume(t.TokenLeftParen, "expect '(' after 'if'")
+	condition := p.expression()
+	p.consume(t.TokenRightParen, "expect ')' after if condition")
+	thenBranch := p.statement()
+	var elseBranch abs.Stmt = nil
+	if p.match(t.TokenElse) {
+		elseBranch = p.statement()
+	}
+	return abs.IfStmt{Condition: condition, ThenBranch: thenBranch, ElseBranch: elseBranch}
+
 }
 
 func (p *Parser) printStatement() abs.Stmt {
@@ -152,8 +220,8 @@ func (p *Parser) unary() abs.Expr {
 }
 
 func (p *Parser) assignment() abs.Expr {
-	expr := p.equality()
-	if p.match() {
+	expr := p.or()
+	if p.match(t.TokenEqual) {
 		equals := p.previous()
 		value := p.assignment()
 		if exprVariable, ok := expr.(abs.VariableExpr); ok {
@@ -162,6 +230,26 @@ func (p *Parser) assignment() abs.Expr {
 		}
 
 		p.error(equals, "invalid assignment target")
+	}
+	return expr
+}
+
+func (p *Parser) or() abs.Expr {
+	expr := p.and()
+	for p.match(t.TokenOr) {
+		operator := p.previous()
+		right := p.and()
+		expr = abs.LogicalExpr{Left: expr, Operator: operator, Right: right}
+	}
+	return expr
+}
+
+func (p *Parser) and() abs.Expr {
+	expr := p.equality()
+	for p.match(t.TokenAnd) {
+		operator := p.previous()
+		right := p.equality()
+		expr = abs.LogicalExpr{Left: expr, Operator: operator, Right: right}
 	}
 	return expr
 }

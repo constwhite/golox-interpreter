@@ -163,6 +163,20 @@ func (i *Interpreter) VisitAssignExpr(expr abs.AssignExpr) interface{} {
 	return value
 }
 
+func (i *Interpreter) VisitLogicalExpr(expr abs.LogicalExpr) interface{} {
+	left := i.evaluate(expr.Left)
+	if expr.Operator.TokenType == t.TokenOr {
+		if i.isTruthy(left) {
+			return left
+		}
+	} else {
+		if !i.isTruthy(left) {
+			return left
+		}
+	}
+	return i.evaluate(expr.Right)
+}
+
 // statement visitors
 func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
 	i.evaluate(stmt.Expression)
@@ -186,6 +200,22 @@ func (i *Interpreter) VisitVarStmt(stmt abs.VarStmt) interface{} {
 
 func (i *Interpreter) VisitBlockStmt(stmt abs.BlockStmt) interface{} {
 	i.executeBlock(stmt.Statements, env.NewEnvironment(i.Environment))
+	return nil
+}
+
+func (i *Interpreter) VisitIfStmt(stmt abs.IfStmt) interface{} {
+	if i.isTruthy(i.evaluate(stmt.Condition)) {
+		i.execute(stmt.ThenBranch)
+	} else if stmt.ElseBranch != nil {
+		i.execute(stmt.ElseBranch)
+	}
+	return nil
+}
+
+func (i *Interpreter) VisitWhileStmt(stmt abs.WhileStmt) interface{} {
+	for i.isTruthy(i.evaluate(stmt.Condition)) {
+		i.execute(stmt.Body)
+	}
 	return nil
 }
 

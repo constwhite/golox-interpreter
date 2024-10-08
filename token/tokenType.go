@@ -28,7 +28,7 @@ const (
 	TokenLesser
 	TokenLesserEqual
 
-	// literals
+	//literals
 	TokenIdentifier
 	TokenString
 	TokenNumber
