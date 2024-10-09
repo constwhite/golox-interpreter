@@ -192,7 +192,7 @@ func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
 }
 
 func (i *Interpreter) VisitFunctionStmt(stmt abs.FunctionStmt) interface{} {
-	function := loxFunction{stmt}
+	function := loxFunction{Declaration: stmt, Closure: i.Environment}
 	i.Environment.Define(stmt.Name.Lexeme, function)
 	return nil
 }

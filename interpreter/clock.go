@@ -12,7 +12,3 @@ func (c Clock) arity() int {
 func (c Clock) call(interpreter *Interpreter, arguements []interface{}) interface{} {
 	return float64(time.Now().UnixMilli() / 1000)
 }
-
-func (c Clock) toString() string {
-	return "<native fn>"
-}

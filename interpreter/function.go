@@ -1,8 +1,6 @@
 package interpreter
 
 import (
-	"fmt"
-
 	abs "github.com/constwhite/golox-interpreter/abstractSyntaxTree"
 	env "github.com/constwhite/golox-interpreter/environment"
 )
@@ -10,11 +8,11 @@ import (
 type loxCallable interface {
 	call(*Interpreter, []interface{}) interface{}
 	arity() int
-	toString() string
 }
 
 type loxFunction struct {
-	declaration abs.FunctionStmt
+	Declaration abs.FunctionStmt
+	Closure     *env.Environment
 }
 
 func (f loxFunction) call(interpreter *Interpreter, args []interface{}) (returnVal interface{}) {
@@ -28,17 +26,14 @@ func (f loxFunction) call(interpreter *Interpreter, args []interface{}) (returnV
 			panic(err)
 		}
 	}()
-	env := env.NewEnvironment(interpreter.Globals)
-	for i := 0; i < len(f.declaration.Params); i++ {
-		env.Define(f.declaration.Params[i].Lexeme, args[i])
+	env := env.NewEnvironment(f.Closure)
+	for i := 0; i < len(f.Declaration.Params); i++ {
+		env.Define(f.Declaration.Params[i].Lexeme, args[i])
 	}
-	interpreter.executeBlock(f.declaration.Body, env)
+	interpreter.executeBlock(f.Declaration.Body, env)
 	return nil
 }
 
 func (f loxFunction) arity() int {
-	return len(f.declaration.Params)
-}
-func (f loxFunction) toString() string {
-	return fmt.Sprintf("<fn %v >", f.declaration.Name.Lexeme)
+	return len(f.Declaration.Params)
 }
