@@ -45,7 +45,11 @@ func (p *Parser) Parse() ([]abs.Stmt, bool) {
 func (p *Parser) declaration() abs.Stmt {
 	if p.Error() != "" {
 		p.HadError = true
+		p.synchronise()
 		return nil
+	}
+	if p.match(t.TokenClass) {
+		return p.classDeclaration()
 	}
 	if p.match(t.TokenFun) {
 		return p.function("function")
@@ -54,6 +58,17 @@ func (p *Parser) declaration() abs.Stmt {
 		return p.varDeclaration()
 	}
 	return p.statement()
+}
+
+func (p *Parser) classDeclaration() abs.Stmt {
+	name := p.consume(t.TokenIdentifier, "expect class name")
+	p.consume(t.TokenLeftBrace, "expect '{' before class body")
+	var methods []abs.FunctionStmt = nil
+	for !p.check(t.TokenRightBrace) && !p.isAtEnd() {
+		methods = append(methods, p.function("method"))
+	}
+	p.consume(t.TokenRightBrace, "expect '}' after class body")
+	return abs.ClassStmt{Name: name, Methods: methods}
 }
 
 func (p *Parser) varDeclaration() abs.Stmt {
@@ -262,6 +277,9 @@ func (p *Parser) call() abs.Expr {
 	for {
 		if p.match(t.TokenLeftParen) {
 			expr = p.finishCall(expr)
+		} else if p.match(t.TokenDot) {
+			name := p.consume(t.TokenIdentifier, "expect property name after '.'")
+			expr = abs.GetExpr{Object: expr, Name: name}
 		} else {
 			break
 		}
@@ -294,9 +312,14 @@ func (p *Parser) assignment() abs.Expr {
 		if exprVariable, ok := expr.(abs.VariableExpr); ok {
 			name := exprVariable.Name
 			return abs.AssignExpr{Name: name, Value: value}
+		} else if exprGet, ok := expr.(abs.GetExpr); ok {
+			name := exprGet.Name
+			object := exprGet.Object
+			return abs.SetExpr{Object: object, Name: name, Value: value}
+		} else {
+			p.error(equals, "invalid assignment target")
 		}
 
-		p.error(equals, "invalid assignment target")
 	}
 	return expr
 }
@@ -335,6 +358,10 @@ func (p *Parser) primary() abs.Expr {
 	if p.match(t.TokenNumber, t.TokenString) {
 		return abs.LiteralExpr{Value: p.previous().Literal}
 	}
+	if p.match(t.TokenThis) {
+		return abs.ThisExpr{Keyword: p.previous()}
+	}
+
 	if p.match(t.TokenIdentifier) {
 		return abs.VariableExpr{Name: p.previous()}
 	}

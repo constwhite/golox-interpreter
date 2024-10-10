@@ -191,6 +191,45 @@ func (i *Interpreter) VisitCallExpr(expr abs.CallExpr) interface{} {
 	return function.call(i, arguements)
 }
 
+func (i *Interpreter) VisitGetExpr(expr abs.GetExpr) interface{} {
+	object := i.evaluate(expr.Object)
+	instance, isInstance := object.(loxInstance)
+	if !isInstance {
+		err := runtimeError{error: errors.New("only instances have properties"), Line: expr.Name.Line}
+		i.RuntimeError = err
+		return nil
+	}
+	property, err := instance.get(expr.Name)
+	if err != nil {
+		i.RuntimeError = runtimeError{error: err, Line: expr.Name.Line}
+		return nil
+	}
+	return property
+}
+
+func (i *Interpreter) VisitSetExpr(expr abs.SetExpr) interface{} {
+	object := i.evaluate(expr.Object)
+	instance, isInstance := object.(loxInstance)
+	if !isInstance {
+		err := runtimeError{error: errors.New("only instances have fields"), Line: expr.Name.Line}
+		i.RuntimeError = err
+		return nil
+	}
+	value := i.evaluate(expr.Value)
+	instance.set(expr.Name, value)
+	return value
+}
+
+func (i *Interpreter) VisitThisExpr(expr abs.ThisExpr) interface{} {
+	value, err := i.lookupVariable(expr.Keyword, expr)
+	if err != nil {
+		runtimeErr := runtimeError{error: err, Line: expr.Keyword.Line}
+		i.RuntimeError = runtimeErr
+
+	}
+	return value
+}
+
 // statement visitors
 func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
 	i.evaluate(stmt.Expression)
@@ -198,7 +237,7 @@ func (i *Interpreter) VisitExpressionStmt(stmt abs.ExpressionStmt) interface{} {
 }
 
 func (i *Interpreter) VisitFunctionStmt(stmt abs.FunctionStmt) interface{} {
-	function := loxFunction{Declaration: stmt, Closure: i.Environment}
+	function := loxFunction{Declaration: stmt, Closure: i.Environment, isInitialiser: false}
 	i.Environment.Define(stmt.Name.Lexeme, function)
 	return nil
 }
@@ -249,6 +288,22 @@ func (i *Interpreter) VisitWhileStmt(stmt abs.WhileStmt) interface{} {
 	for i.isTruthy(i.evaluate(stmt.Condition)) {
 		i.execute(stmt.Body)
 	}
+	return nil
+}
+
+func (i *Interpreter) VisitClassStmt(stmt abs.ClassStmt) interface{} {
+	i.Environment.Define(stmt.Name.Lexeme, nil)
+
+	methods := make(map[string]loxFunction)
+	for index := 0; index < len(stmt.Methods); index++ {
+		method := stmt.Methods[index]
+		isInit := method.Name.Lexeme == "init"
+		function := loxFunction{Declaration: method, Closure: i.Environment, isInitialiser: isInit}
+		methods[method.Name.Lexeme] = function
+	}
+
+	class := loxClass{Name: stmt.Name.Lexeme, methods: methods}
+	i.Environment.Assign(stmt.Name, class)
 	return nil
 }
 

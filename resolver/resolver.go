@@ -17,14 +17,23 @@ type Resolver struct {
 	HadError       bool
 	scopes         scopes
 	currentFuntion functionType
+	currentClass   classType
 	ResolverError
 }
 
 type functionType uint8
+type classType uint8
 
 const (
 	funcTypeNone functionType = iota
 	funcTypeFunction
+	funcTypeMethod
+	funcTypeInitialiser
+)
+
+const (
+	classTypeNone classType = iota
+	classTypeClass
 )
 
 type ResolverError struct {
@@ -85,6 +94,9 @@ func (r *Resolver) VisitReturnStmt(stmt abs.ReturnStmt) interface{} {
 		r.error(stmt.Keyword, "can not return from the top level code")
 	}
 	if stmt.Value != nil {
+		if r.currentFuntion == funcTypeInitialiser {
+			r.error(stmt.Keyword, "can not return from an initialiser")
+		}
 		r.resolveExpr(stmt.Value)
 	}
 	return nil
@@ -92,6 +104,26 @@ func (r *Resolver) VisitReturnStmt(stmt abs.ReturnStmt) interface{} {
 func (r *Resolver) VisitWhileStmt(stmt abs.WhileStmt) interface{} {
 	r.resolveExpr(stmt.Condition)
 	r.resolveStmt(stmt.Body)
+	return nil
+}
+
+func (r *Resolver) VisitClassStmt(stmt abs.ClassStmt) interface{} {
+	enclosingClass := r.currentClass
+	r.currentClass = classTypeClass
+	r.scopes.declare(stmt.Name)
+	r.scopes.define(stmt.Name)
+	r.beginScope()
+	r.scopes.peek()["this"] = true
+	for i := 0; i < len(stmt.Methods); i++ {
+		method := stmt.Methods[i]
+		declaration := funcTypeMethod
+		if method.Name.Lexeme == "init" {
+			declaration = funcTypeInitialiser
+		}
+		r.resolveFunction(method, declaration)
+	}
+	r.endScope()
+	r.currentClass = enclosingClass
 	return nil
 }
 
@@ -140,6 +172,24 @@ func (r *Resolver) VisitLogicalExpr(expr abs.LogicalExpr) interface{} {
 func (r *Resolver) VisitUnaryExpr(expr abs.UnaryExpr) interface{} {
 
 	r.resolveExpr(expr.Right)
+	return nil
+}
+func (r *Resolver) VisitGetExpr(expr abs.GetExpr) interface{} {
+	r.resolveExpr(expr.Object)
+	return nil
+}
+func (r *Resolver) VisitSetExpr(expr abs.SetExpr) interface{} {
+	r.resolveExpr(expr.Value)
+	r.resolveExpr(expr.Object)
+	return nil
+}
+
+func (r *Resolver) VisitThisExpr(expr abs.ThisExpr) interface{} {
+	if r.currentClass == classTypeNone {
+		r.error(expr.Keyword, "can't use 'this' outside of a class")
+		return nil
+	}
+	r.resolveLocal(expr, expr.Keyword)
 	return nil
 }
 

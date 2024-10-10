@@ -1,13 +1,13 @@
 package abstractSyntaxTree
 
-import "github.com/constwhite/golox-interpreter/token"
+import t "github.com/constwhite/golox-interpreter/token"
 
 type Expr interface {
 	Accept(visitor ExprVisitor) interface{}
 }
 type BinaryExpr struct {
 	Left     Expr
-	Operator token.Token
+	Operator t.Token
 	Right    Expr
 }
 
@@ -32,7 +32,7 @@ func (e LiteralExpr) Accept(visitor ExprVisitor) interface{} {
 }
 
 type UnaryExpr struct {
-	Operator token.Token
+	Operator t.Token
 	Right    Expr
 }
 
@@ -41,7 +41,7 @@ func (e UnaryExpr) Accept(visitor ExprVisitor) interface{} {
 }
 
 type VariableExpr struct {
-	Name token.Token
+	Name t.Token
 }
 
 func (e VariableExpr) Accept(visitor ExprVisitor) interface{} {
@@ -49,7 +49,7 @@ func (e VariableExpr) Accept(visitor ExprVisitor) interface{} {
 }
 
 type AssignExpr struct {
-	Name  token.Token
+	Name  t.Token
 	Value Expr
 }
 
@@ -59,7 +59,7 @@ func (e AssignExpr) Accept(visitor ExprVisitor) interface{} {
 
 type LogicalExpr struct {
 	Left     Expr
-	Operator token.Token
+	Operator t.Token
 	Right    Expr
 }
 
@@ -69,12 +69,39 @@ func (e LogicalExpr) Accept(visitor ExprVisitor) interface{} {
 
 type CallExpr struct {
 	Callee     Expr
-	Paren      token.Token
+	Paren      t.Token
 	Arguements []Expr
 }
 
 func (e CallExpr) Accept(visitor ExprVisitor) interface{} {
 	return visitor.VisitCallExpr(e)
+}
+
+type GetExpr struct {
+	Object Expr
+	Name   t.Token
+}
+
+func (e GetExpr) Accept(visitor ExprVisitor) interface{} {
+	return visitor.VisitGetExpr(e)
+}
+
+type SetExpr struct {
+	Object Expr
+	Name   t.Token
+	Value  Expr
+}
+
+func (e SetExpr) Accept(visitor ExprVisitor) interface{} {
+	return visitor.VisitSetExpr(e)
+}
+
+type ThisExpr struct {
+	Keyword t.Token
+}
+
+func (e ThisExpr) Accept(visitor ExprVisitor) interface{} {
+	return visitor.VisitThisExpr(e)
 }
 
 type ExprVisitor interface {
@@ -84,6 +111,9 @@ type ExprVisitor interface {
 	VisitUnaryExpr(expr UnaryExpr) interface{}
 	VisitVariableExpr(expr VariableExpr) interface{}
 	VisitAssignExpr(expr AssignExpr) interface{}
-	VisitCallExpr(expr CallExpr) interface{}
 	VisitLogicalExpr(expr LogicalExpr) interface{}
+	VisitCallExpr(expr CallExpr) interface{}
+	VisitGetExpr(expr GetExpr) interface{}
+	VisitSetExpr(expr SetExpr) interface{}
+	VisitThisExpr(expr ThisExpr) interface{}
 }
