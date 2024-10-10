@@ -31,6 +31,16 @@ func (env *Environment) Get(name t.Token) (interface{}, error) {
 	}
 	return nil, ErrorUndefinedVar
 }
+func (env *Environment) GetAt(distance int, name string) interface{} {
+	return env.ancestor(distance).Values[name]
+}
+func (env *Environment) ancestor(distance int) *Environment {
+	environment := env
+	for i := 0; i < distance; i++ {
+		environment = environment.Enclosing
+	}
+	return environment
+}
 
 func (env *Environment) Assign(name t.Token, value interface{}) error {
 	if _, ok := env.Values[name.Lexeme]; ok {
@@ -43,4 +53,8 @@ func (env *Environment) Assign(name t.Token, value interface{}) error {
 
 	return ErrorUndefinedVar
 
+}
+
+func (env *Environment) AssignAt(distance int, name t.Token, value interface{}) {
+	env.ancestor(distance).Values[name.Lexeme] = value
 }

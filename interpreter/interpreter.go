@@ -18,6 +18,7 @@ type Interpreter struct {
 	RuntimeError    runtimeError
 	Environment     *env.Environment
 	Globals         *env.Environment
+	Locals          map[abs.Expr]int
 }
 
 type runtimeError struct {
@@ -32,7 +33,7 @@ func (rte *runtimeError) Error() error {
 func NewInterpreter(stdErr io.Writer, stdOut io.Writer) *Interpreter {
 	global := env.NewEnvironment(nil)
 	global.Define("clock", Clock{})
-	return &Interpreter{stdErr: stdErr, stdOut: stdOut, Environment: global, Globals: global}
+	return &Interpreter{stdErr: stdErr, stdOut: stdOut, Environment: global, Globals: global, Locals: make(map[abs.Expr]int)}
 }
 
 func (i *Interpreter) Interpret(stmtList []abs.Stmt) bool {
@@ -132,7 +133,8 @@ func (i *Interpreter) VisitBinaryExpr(expr abs.BinaryExpr) interface{} {
 }
 
 func (i *Interpreter) VisitVariableExpr(expr abs.VariableExpr) interface{} {
-	value, err := i.Environment.Get(expr.Name)
+	// value, err := i.Environment.Get(expr.Name)
+	value, err := i.lookupVariable(expr.Name, expr)
 	if err != nil {
 		runtimeErr := runtimeError{error: err, Line: expr.Name.Line}
 		i.RuntimeError = runtimeErr
@@ -142,10 +144,14 @@ func (i *Interpreter) VisitVariableExpr(expr abs.VariableExpr) interface{} {
 }
 func (i *Interpreter) VisitAssignExpr(expr abs.AssignExpr) interface{} {
 	value := i.evaluate(expr.Value)
-	err := i.Environment.Assign(expr.Name, value)
-	if err != nil {
-		runtimeErr := runtimeError{error: err, Line: expr.Name.Line}
-		i.RuntimeError = runtimeErr
+	distance, ok := i.Locals[expr]
+	if ok {
+		i.Environment.AssignAt(distance, expr.Name, value)
+	} else {
+		if err := i.Globals.Assign(expr.Name, value); err != nil {
+			runtimeErr := runtimeError{error: err, Line: expr.Name.Line}
+			i.RuntimeError = runtimeErr
+		}
 	}
 	return value
 }
@@ -276,6 +282,35 @@ func (i *Interpreter) stringify(value interface{}) string {
 	return fmt.Sprint(value)
 }
 
+func (i *Interpreter) lookupVariable(name t.Token, expr abs.Expr) (interface{}, error) {
+	distance, ok := i.Locals[expr]
+	if ok {
+		return i.Environment.GetAt(distance, name.Lexeme), nil
+	} else {
+		return i.Globals.Get(name)
+	}
+}
+
+func (i *Interpreter) execute(stmt abs.Stmt) {
+	stmt.Accept(i)
+}
+
+func (i *Interpreter) Resolve(expr abs.Expr, depth int) {
+	i.Locals[expr] = depth
+}
+
+func (i *Interpreter) executeBlock(statements []abs.Stmt, environment *env.Environment) {
+	previous := i.Environment
+	defer func() {
+		i.Environment = previous
+	}()
+	i.Environment = environment
+	for index := 0; index < len(statements); index++ {
+		stmt := statements[index]
+		i.execute(stmt)
+	}
+}
+
 // runtime errors
 func (i *Interpreter) checkNumberOperand(operator t.Token, operand interface{}) bool {
 	if _, ok := operand.(float64); ok {
@@ -297,20 +332,4 @@ func (i *Interpreter) checkNumberOperands(operator t.Token, left interface{}, ri
 	i.RuntimeError = err
 
 	return false
-}
-
-func (i *Interpreter) execute(stmt abs.Stmt) {
-	stmt.Accept(i)
-}
-
-func (i *Interpreter) executeBlock(statements []abs.Stmt, environment *env.Environment) {
-	previous := i.Environment
-	defer func() {
-		i.Environment = previous
-	}()
-	i.Environment = environment
-	for index := 0; index < len(statements); index++ {
-		stmt := statements[index]
-		i.execute(stmt)
-	}
 }

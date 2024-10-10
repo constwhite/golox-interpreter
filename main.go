@@ -8,6 +8,7 @@ import (
 
 	"github.com/constwhite/golox-interpreter/interpreter"
 	"github.com/constwhite/golox-interpreter/parser"
+	"github.com/constwhite/golox-interpreter/resolver"
 	"github.com/constwhite/golox-interpreter/scanner"
 )
 
@@ -73,14 +74,23 @@ func run(source string) {
 	// fmt.Println(source)
 	scanner := scanner.NewScanner(source, os.Stderr)
 	tokens := scanner.ScanTokens()
+
 	parser := parser.NewParser(tokens, os.Stderr)
 	statements, HadError := parser.Parse()
 
+	interpreter := interpreter.NewInterpreter(os.Stderr, os.Stdout)
 	if HadError {
 		return
 	}
-	interpreter := interpreter.NewInterpreter(os.Stderr, os.Stdout)
+	resolver := resolver.NewResolver(interpreter)
+	HadError = resolver.ResolveStatements(statements)
+	if HadError {
+		return
+	}
 	hadRuntimeError = interpreter.Interpret(statements)
+	if hadRuntimeError {
+		return
+	}
 	// printer := abstractsyntaxtree.NewPrinter()
 	// fmt.Println(printer.Print(statements))
 

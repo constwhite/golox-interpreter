@@ -12,3 +12,7 @@ func ReportError(w io.Writer, msg string, where string, line int) {
 func RuntimeError(w io.Writer, err error, line int) {
 	fmt.Fprintf(w, "%v\n[line:%v]", err, line)
 }
+
+func CompileError(w io.Writer, err error, line int) {
+	fmt.Fprintf(w, "%v\n[line:%v]", err, line)
+}
