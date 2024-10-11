@@ -62,13 +62,18 @@ func (p *Parser) declaration() abs.Stmt {
 
 func (p *Parser) classDeclaration() abs.Stmt {
 	name := p.consume(t.TokenIdentifier, "expect class name")
+	var superclass *abs.VariableExpr = nil
+	if p.match(t.TokenLesser) {
+		p.consume(t.TokenIdentifier, "expect superclass name")
+		superclass = &abs.VariableExpr{Name: p.previous()}
+	}
 	p.consume(t.TokenLeftBrace, "expect '{' before class body")
 	var methods []abs.FunctionStmt = nil
 	for !p.check(t.TokenRightBrace) && !p.isAtEnd() {
 		methods = append(methods, p.function("method"))
 	}
 	p.consume(t.TokenRightBrace, "expect '}' after class body")
-	return abs.ClassStmt{Name: name, Methods: methods}
+	return abs.ClassStmt{Name: name, Superclass: superclass, Methods: methods}
 }
 
 func (p *Parser) varDeclaration() abs.Stmt {
@@ -358,6 +363,13 @@ func (p *Parser) primary() abs.Expr {
 	if p.match(t.TokenNumber, t.TokenString) {
 		return abs.LiteralExpr{Value: p.previous().Literal}
 	}
+	if p.match(t.TokenSuper) {
+		keyword := p.previous()
+		p.consume(t.TokenDot, "expect '.' after 'super'")
+		method := p.consume(t.TokenIdentifier, "expect superclass method name")
+		return abs.SuperExpr{Keyword: keyword, Method: method}
+	}
+
 	if p.match(t.TokenThis) {
 		return abs.ThisExpr{Keyword: p.previous()}
 	}

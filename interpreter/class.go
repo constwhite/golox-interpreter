@@ -7,8 +7,9 @@ import (
 )
 
 type loxClass struct {
-	Name    string
-	methods map[string]loxFunction
+	Name       string
+	methods    map[string]loxFunction
+	SuperClass *loxClass
 }
 
 func (c loxClass) call(interpreter *Interpreter, args []interface{}) interface{} {
@@ -30,6 +31,9 @@ func (c loxClass) arity() int {
 func (c loxClass) findMethod(name string) *loxFunction {
 	if method, ok := c.methods[name]; ok {
 		return &method
+	}
+	if c.SuperClass != nil {
+		return c.SuperClass.findMethod(name)
 	}
 	return nil
 }

@@ -1,6 +1,8 @@
 package resolver
 
-import t "github.com/constwhite/golox-interpreter/token"
+import (
+	t "github.com/constwhite/golox-interpreter/token"
+)
 
 type scope map[string]bool
 
@@ -11,6 +13,7 @@ func (s *scopes) declare(token t.Token) {
 	if s.empty() {
 		return
 	}
+
 	scope := s.peek()
 	scope[token.Lexeme] = false
 }
@@ -19,6 +22,7 @@ func (s *scopes) define(token t.Token) {
 	if s.empty() {
 		return
 	}
+
 	scope := s.peek()
 	scope[token.Lexeme] = true
 }
@@ -26,6 +30,7 @@ func (s *scopes) define(token t.Token) {
 // stack methods. scopes is recieved as a pointer as it it modifying the original scopes slice on the resolver
 func (s *scopes) push(scope scope) {
 	*s = append(*s, scope)
+
 }
 
 func (s *scopes) pop() scope {
@@ -38,6 +43,11 @@ func (s *scopes) pop() scope {
 }
 
 func (s *scopes) peek() scope {
+
+	// if !s.empty() {
+	// 	return (*s)[len(*s)-1]
+	// }
+	// return nil
 	return (*s)[len(*s)-1]
 }
 

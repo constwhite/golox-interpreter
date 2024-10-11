@@ -79,8 +79,9 @@ func (s ReturnStmt) Accept(visitor StmtVisitor) interface{} {
 }
 
 type ClassStmt struct {
-	Name    t.Token
-	Methods []FunctionStmt
+	Name       t.Token
+	Superclass *VariableExpr
+	Methods    []FunctionStmt
 }
 
 func (s ClassStmt) Accept(visitor StmtVisitor) interface{} {

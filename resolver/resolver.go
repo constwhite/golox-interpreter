@@ -34,6 +34,7 @@ const (
 const (
 	classTypeNone classType = iota
 	classTypeClass
+	classTypeSubclass
 )
 
 type ResolverError struct {
@@ -51,6 +52,7 @@ func NewResolver(interpreter *in.Interpreter) *Resolver {
 //visit statements
 
 func (r *Resolver) VisitBlockStmt(stmt abs.BlockStmt) interface{} {
+
 	r.beginScope()
 	r.ResolveStatements(stmt.Statements)
 	r.endScope()
@@ -112,6 +114,20 @@ func (r *Resolver) VisitClassStmt(stmt abs.ClassStmt) interface{} {
 	r.currentClass = classTypeClass
 	r.scopes.declare(stmt.Name)
 	r.scopes.define(stmt.Name)
+	if stmt.Superclass != nil && stmt.Name.Lexeme == stmt.Superclass.Name.Lexeme {
+		r.error(stmt.Superclass.Name, "a class can not inherit from itself")
+		return nil
+	}
+	if stmt.Superclass != nil {
+		r.currentClass = classTypeSubclass
+		r.resolveExpr(stmt.Superclass)
+	}
+	if stmt.Superclass != nil {
+		r.beginScope()
+		defer r.endScope()
+		r.scopes.peek()["super"] = true
+	}
+
 	r.beginScope()
 	r.scopes.peek()["this"] = true
 	for i := 0; i < len(stmt.Methods); i++ {
@@ -129,10 +145,14 @@ func (r *Resolver) VisitClassStmt(stmt abs.ClassStmt) interface{} {
 
 // visit expressions
 func (r *Resolver) VisitVariableExpr(expr abs.VariableExpr) interface{} {
-	scope := r.scopes.peek()
-	defined, declared := scope[expr.Name.Lexeme]
-	if r.scopes.empty() && declared && !defined {
-		r.error(expr.Name, "cant't read local variable in its own initialiser.")
+
+	if len(r.scopes) > 0 {
+		scope := r.scopes.peek()
+		defined, declared := scope[expr.Name.Lexeme]
+		if r.scopes.empty() && declared && !defined {
+			r.error(expr.Name, "cant't read local variable in its own initialiser.")
+		}
+
 	}
 	r.resolveLocal(expr, expr.Name)
 	return nil
@@ -184,6 +204,16 @@ func (r *Resolver) VisitSetExpr(expr abs.SetExpr) interface{} {
 	return nil
 }
 
+func (r *Resolver) VisitSuperExpr(expr abs.SuperExpr) interface{} {
+	if r.currentClass == classTypeNone {
+		r.error(expr.Keyword, "can't use 'super' outside of class")
+	} else if r.currentClass != classTypeSubclass {
+		r.error(expr.Keyword, "can't use 'super' in a class with no superclass")
+	}
+	r.resolveLocal(expr, expr.Keyword)
+	return nil
+}
+
 func (r *Resolver) VisitThisExpr(expr abs.ThisExpr) interface{} {
 	if r.currentClass == classTypeNone {
 		r.error(expr.Keyword, "can't use 'this' outside of a class")
@@ -198,6 +228,7 @@ func (r *Resolver) VisitThisExpr(expr abs.ThisExpr) interface{} {
 func (r *Resolver) resolveFunction(function abs.FunctionStmt, fnType functionType) {
 	enclosingFunction := r.currentFuntion
 	r.currentFuntion = fnType
+
 	r.beginScope()
 	for i := 0; i < len(function.Params); i++ {
 		param := function.Params[i]
@@ -237,10 +268,12 @@ func (r *Resolver) resolveExpr(expr abs.Expr) {
 	expr.Accept(r)
 }
 func (r *Resolver) beginScope() {
+
 	r.scopes.push(make(scope))
 }
 
 func (r *Resolver) endScope() {
+
 	r.scopes.pop()
 }
 

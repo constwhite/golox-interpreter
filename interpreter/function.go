@@ -46,7 +46,7 @@ func (f loxFunction) arity() int {
 	return len(f.Declaration.Params)
 }
 func (f loxFunction) bind(instance *loxInstance) loxFunction {
-	environment := env.Environment{Enclosing: f.Closure}
+	environment := *env.NewEnvironment(f.Closure)
 	environment.Define("this", instance)
 	return loxFunction{Declaration: f.Declaration, Closure: &environment, isInitialiser: f.isInitialiser}
 }
