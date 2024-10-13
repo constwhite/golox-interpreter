@@ -2,15 +2,6 @@
 
 Tree Walk Interpreter for Lox programming language written in Go. From the book *Crafting Interpreters* written by Robert Nystrom.
 
-## Installation
-
-run in the terminal:
-```
-go get github.com/constwhite/golox-interpreter
-
-go build main.go
-```
-
 ## Usage
 To run a REPL in the command line
 ```
