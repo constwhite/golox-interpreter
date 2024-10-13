@@ -14,7 +14,6 @@ type Parser struct {
 	current      int
 	sourceTokens []t.Token
 	HadError     bool
-	parseError
 }
 
 type parseError struct {
@@ -34,20 +33,26 @@ func (p *Parser) Parse() ([]abs.Stmt, bool) {
 	for !p.isAtEnd() {
 		statements = append(statements, p.declaration())
 	}
-	if p.Error() != "" {
-		p.HadError = true
-		return nil, p.HadError
-	}
+
 	return statements, p.HadError
 }
 
 // grammar functions
 func (p *Parser) declaration() abs.Stmt {
-	if p.Error() != "" {
-		p.HadError = true
-		p.synchronise()
-		return nil
-	}
+
+	defer func() {
+
+		//i dislike this error handling as it is not very go but unsure how to handle it otherwise
+		if err := recover(); err != nil {
+			if _, ok := err.(parseError); ok {
+				p.HadError = true
+				p.synchronise()
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
 	if p.match(t.TokenClass) {
 		return p.classDeclaration()
 	}
@@ -329,6 +334,7 @@ func (p *Parser) assignment() abs.Expr {
 	return expr
 }
 
+// parses or logical statement
 func (p *Parser) or() abs.Expr {
 	expr := p.and()
 	for p.match(t.TokenOr) {
@@ -339,6 +345,7 @@ func (p *Parser) or() abs.Expr {
 	return expr
 }
 
+// parses and logical statement
 func (p *Parser) and() abs.Expr {
 	expr := p.equality()
 	for p.match(t.TokenAnd) {
@@ -349,6 +356,7 @@ func (p *Parser) and() abs.Expr {
 	return expr
 }
 
+// parses primary expressions
 func (p *Parser) primary() abs.Expr {
 	if p.match(t.TokenFalse) {
 		return abs.LiteralExpr{Value: false}
@@ -388,6 +396,8 @@ func (p *Parser) primary() abs.Expr {
 }
 
 // error handling
+
+// checks if current token is the specified token type. throws error if the token is not expected
 func (p *Parser) consume(tokenType t.TokenType, message string) t.Token {
 	if p.check(tokenType) {
 		return p.advance()
@@ -397,6 +407,7 @@ func (p *Parser) consume(tokenType t.TokenType, message string) t.Token {
 
 }
 
+// throws a parseError using panic. not a very go way of error handling
 func (p *Parser) error(token t.Token, message string) {
 	var where string
 	if token.TokenType == t.TokenEOF {
@@ -406,10 +417,11 @@ func (p *Parser) error(token t.Token, message string) {
 	}
 	err := parseError{msg: message}
 	e.ReportError(p.stdErr, err.Error(), where, token.Line+1)
-	p.parseError = err
-	// panic(err)
+
+	panic(err)
 }
 
+// discards tokens until it finds a statement boundary
 func (p *Parser) synchronise() {
 	for !p.isAtEnd() {
 		if p.previous().TokenType == t.TokenSemiColon {
@@ -433,6 +445,8 @@ func (p *Parser) synchronise() {
 }
 
 // helper functions
+
+// checks to see if the current token has the same token type as any of a specified range of token types and if true, advances
 func (p *Parser) match(tokenTypes ...t.TokenType) bool {
 	for i := 0; i < len(tokenTypes); i++ {
 		tokenType := tokenTypes[i]
@@ -444,6 +458,7 @@ func (p *Parser) match(tokenTypes ...t.TokenType) bool {
 	return false
 }
 
+// if not isAtEnd, compares the token type of the current token to a given token type and returns the boolean value
 func (p *Parser) check(tokenType t.TokenType) bool {
 	if p.isAtEnd() {
 		return false
@@ -451,6 +466,7 @@ func (p *Parser) check(tokenType t.TokenType) bool {
 	return p.peek().TokenType == tokenType
 }
 
+// if not isAtEnd, increments p.current then returns the previous token
 func (p *Parser) advance() t.Token {
 	if !p.isAtEnd() {
 		p.current++
@@ -458,12 +474,17 @@ func (p *Parser) advance() t.Token {
 	return p.previous()
 }
 
+// checks to see if the current token is equal to EOF "End of file"
 func (p *Parser) isAtEnd() bool {
 	return p.peek().TokenType == t.TokenEOF
 }
+
+// looks at the current token in the source
 func (p *Parser) peek() t.Token {
 	return p.sourceTokens[p.current]
 }
+
+// looks at the previous token in the source
 func (p *Parser) previous() t.Token {
 	return p.sourceTokens[p.current-1]
 }

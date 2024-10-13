@@ -7,6 +7,7 @@ import (
 
 	abs "github.com/constwhite/golox-interpreter/abstractSyntaxTree"
 	"github.com/constwhite/golox-interpreter/errorHandler"
+
 	in "github.com/constwhite/golox-interpreter/interpreter"
 	t "github.com/constwhite/golox-interpreter/token"
 )

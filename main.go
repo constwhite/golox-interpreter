@@ -71,17 +71,16 @@ func runFile(path string) {
 func run(source string) {
 	// init new scanner. NOT bufio.NewScanner, this is the scanner we are going to build not yet impleneted
 
-	// fmt.Println(source)
 	scanner := scanner.NewScanner(source, os.Stderr)
 	tokens := scanner.ScanTokens()
 
 	parser := parser.NewParser(tokens, os.Stderr)
 	statements, HadError := parser.Parse()
 
-	interpreter := interpreter.NewInterpreter(os.Stderr, os.Stdout)
 	if HadError {
 		return
 	}
+	interpreter := interpreter.NewInterpreter(os.Stderr, os.Stdout)
 	resolver := resolver.NewResolver(interpreter)
 	HadError = resolver.ResolveStatements(statements)
 	if HadError {
@@ -91,22 +90,5 @@ func run(source string) {
 	if hadRuntimeError {
 		return
 	}
-	// printer := abstractsyntaxtree.NewPrinter()
-	// fmt.Println(printer.Print(statements))
-
-	// for i := 0; i < len(tokens); i++ {
-	// 	printToken := tokens[i]
-	// 	fmt.Printf("\nToken type: %v, Lexeme: %v, Literal: %v, Line:%v\n", printToken.TokenType, printToken.Lexeme, printToken.Literal, printToken.Line)
-	// }
 
 }
-
-// func Error(line int, message string) {
-// 	report(line, "", message)
-// }
-
-// func report(line int, where string, message string) {
-// 	err := fmt.Errorf("[line %v] error %v: %v", line, where, message)
-// 	fmt.Print(err)
-// 	hadError = true
-// }

@@ -36,18 +36,23 @@ func NewInterpreter(stdErr io.Writer, stdOut io.Writer) *Interpreter {
 	return &Interpreter{stdErr: stdErr, stdOut: stdOut, Environment: global, Globals: global, Locals: make(map[abs.Expr]int)}
 }
 
-func (i *Interpreter) Interpret(stmtList []abs.Stmt) bool {
-	if err := i.RuntimeError.Error(); err != nil {
-		e.RuntimeError(i.stdErr, err, i.RuntimeError.Line)
-		i.HasRuntimeError = true
-		return i.HasRuntimeError
-	} else {
-		for index := 0; index < len(stmtList); index++ {
-			stmt := stmtList[index]
-			i.execute(stmt)
+func (i *Interpreter) Interpret(stmtList []abs.Stmt) (HasRuntimeError bool) {
+	defer func() {
+		if err := recover(); err != nil {
+			if _, ok := err.(runtimeError); ok {
+				HasRuntimeError = true
+				return
+			} else {
+				panic(err)
+			}
 		}
-		return false
+	}()
+	for index := 0; index < len(stmtList); index++ {
+		stmt := stmtList[index]
+		i.execute(stmt)
 	}
+	return HasRuntimeError
+
 }
 
 //expression visitors
@@ -77,33 +82,29 @@ func (i *Interpreter) VisitBinaryExpr(expr abs.BinaryExpr) interface{} {
 
 	switch expr.Operator.TokenType {
 	case t.TokenGreater:
-		if i.checkNumberOperands(expr.Operator, left, right) {
-			return left.(float64) > right.(float64)
-		}
+		i.checkNumberOperands(expr.Operator, left, right)
+		return left.(float64) > right.(float64)
+
 	case t.TokenGreaterEqual:
-		if i.checkNumberOperands(expr.Operator, left, right) {
-			return left.(float64) >= right.(float64)
+		i.checkNumberOperands(expr.Operator, left, right)
+		return left.(float64) >= right.(float64)
 
-		}
 	case t.TokenLesser:
-		if i.checkNumberOperands(expr.Operator, left, right) {
-			return left.(float64) < right.(float64)
+		i.checkNumberOperands(expr.Operator, left, right)
+		return left.(float64) < right.(float64)
 
-		}
 	case t.TokenLesserEqual:
-		if i.checkNumberOperands(expr.Operator, left, right) {
+		i.checkNumberOperands(expr.Operator, left, right)
+		return left.(float64) <= right.(float64)
 
-			return left.(float64) <= right.(float64)
-		}
 	case t.TokenBangEqual:
 		return left != right
 	case t.TokenEqualEqual:
 		return left == right
 	case t.TokenMinus:
-		if i.checkNumberOperands(expr.Operator, left, right) {
-			return left.(float64) - right.(float64)
+		i.checkNumberOperands(expr.Operator, left, right)
+		return left.(float64) - right.(float64)
 
-		}
 	case t.TokenPlus:
 		_, leftIsFloat := left.(float64)
 		_, rightIsFloat := right.(float64)
@@ -116,17 +117,17 @@ func (i *Interpreter) VisitBinaryExpr(expr abs.BinaryExpr) interface{} {
 			return left.(string) + right.(string)
 		}
 		err := runtimeError{error: fmt.Errorf("operands must be numbers or string"), Line: expr.Operator.Line}
-		i.RuntimeError = err
+		e.RuntimeError(i.stdErr, err.Error(), err.Line)
+		panic(err)
 	case t.TokenSlash:
-		if i.checkNumberOperands(expr.Operator, left, right) {
-			return left.(float64) / right.(float64)
+		i.checkNumberOperands(expr.Operator, left, right)
+		return left.(float64) / right.(float64)
 
-		}
 	case t.TokenStar:
-		if i.checkNumberOperands(expr.Operator, left, right) {
+		i.checkNumberOperands(expr.Operator, left, right)
 
-			return left.(float64) * right.(float64)
-		}
+		return left.(float64) * right.(float64)
+
 	}
 
 	return nil
@@ -361,14 +362,6 @@ func (i *Interpreter) stringify(value interface{}) string {
 	if value == nil {
 		return "nil"
 	}
-	// if _, isNumber := value.(float64); isNumber {
-	// 	text, _ := value.(string)
-	// 	// if text[len(text)-2:] == ".0" {
-	// 	// 	text = text[:len(text)-2]
-	// 	// }
-	// 	return text
-	// }
-	// return value.(string)
 	return fmt.Sprint(value)
 }
 
@@ -402,14 +395,16 @@ func (i *Interpreter) executeBlock(statements []abs.Stmt, environment *env.Envir
 }
 
 // runtime errors
+
 func (i *Interpreter) checkNumberOperand(operator t.Token, operand interface{}) bool {
 	if _, ok := operand.(float64); ok {
 		return true
 	}
 	err := runtimeError{error: fmt.Errorf("operand must be a number"), Line: operator.Line}
-	i.RuntimeError = err
 
-	return false
+	i.RuntimeError = err
+	e.RuntimeError(i.stdErr, err.Error(), err.Line)
+	panic(err)
 }
 
 func (i *Interpreter) checkNumberOperands(operator t.Token, left interface{}, right interface{}) bool {
@@ -419,7 +414,9 @@ func (i *Interpreter) checkNumberOperands(operator t.Token, left interface{}, ri
 		return true
 	}
 	err := runtimeError{error: fmt.Errorf("operands must be numbers"), Line: operator.Line}
+	e.RuntimeError(i.stdErr, err.Error(), err.Line)
 	i.RuntimeError = err
 
-	return false
+	panic(err)
+
 }
